@@ -2,7 +2,8 @@ use crossterm::cursor::{Hide, Show};
 use crossterm::event::{Event, KeyCode};
 use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::{event, terminal, ExecutableCommand};
-use invaders_game::frame::new_frame;
+use invaders_game::frame::{new_frame, Drawable};
+use invaders_game::player::Player;
 use invaders_game::{frame, render};
 use rusty_audio::Audio;
 use std::error::Error;
@@ -12,12 +13,12 @@ use std::{io, thread};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut audio = Audio::new();
-    audio.add("explode", "explode.wav");
-    audio.add("lose", "lose.wav");
-    audio.add("move", "move.wav");
-    audio.add("pew", "pew.wav");
-    audio.add("startup", "startup.wav");
-    audio.add("win", "win.wav");
+    audio.add("explode", "sounds/explode.wav");
+    audio.add("lose", "sounds/lose.wav");
+    audio.add("move", "sounds/move.wav");
+    audio.add("pew", "sounds/pew.wav");
+    audio.add("startup", "sounds/startup.wav");
+    audio.add("win", "sounds/win.wav");
     audio.play("startup");
 
     let mut stdout = io::stdout();
@@ -40,12 +41,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
+    let mut player = Player::new();
     'gameloop: loop {
         let mut curr_frame = new_frame();
 
         while event::poll(Duration::default())? {
             if let Event::Key(key_event) = event::read()? {
                 match key_event.code {
+                    KeyCode::Left => player.move_left(),
+                    KeyCode::Right => player.move_right(),
                     KeyCode::Esc | KeyCode::Char('q') => {
                         audio.play("lose");
                         break 'gameloop;
@@ -55,6 +59,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
 
+        player.draw(&mut curr_frame);
         let _ = render_tx.send(curr_frame);
         thread::sleep(Duration::from_millis(1));
     }
